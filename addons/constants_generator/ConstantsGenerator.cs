@@ -11,19 +11,33 @@ namespace minigolf.addons.constants_generator;
 
 [Tool]
 public partial class ConstantsGenerator : EditorPlugin {
-	private static string project;
-	private const string namespaceOverwrite = null;
-	private const string actionsName = "Actions";
-	private const string layersName = "CollisionLayers";
-	private const string groupsName = "Groups";
-	private const bool noActions = false;
-	private const bool noLayers = false;
-	private const bool noGroups = false;
-	private const string pathToScripts = "scripts\\generated";
+	private const string KEY_ROOT = "plugin/constants_generator/";
+	private const string KEY_PROJECT_NAME = KEY_ROOT + "project_name";
+	private const string KEY_NAMESPACE_OVERWRITE = KEY_ROOT + "namespace_overwrite";
+	private const string KEY_PATH_TO_SCRIPTS = KEY_ROOT + "path_to_scripts";
+	private const string KEY_ACTIONS_NAME = KEY_ROOT + "actions_name";
+	private const string KEY_LAYERS_NAME = KEY_ROOT + "layers_name";
+	private const string KEY_GROUPS_NAME = KEY_ROOT + "groups_name";
+	private const string KEY_GENERATE_ACTIONS = KEY_ROOT + "generate_actions";
+	private const string KEY_GENERATE_LAYERS = KEY_ROOT + "generate_layers";
+	private const string KEY_GENERATE_GROUPS = KEY_ROOT + "generate_groups";
+
+	private EditorSettings settings;
+
+	private string settingsNamespace => settings.GetSetting(KEY_PROJECT_NAME).AsString();
+	private string namespaceOverwrite => settings.GetSetting(KEY_NAMESPACE_OVERWRITE).AsString();
+	private string actionsName => settings.GetSetting(KEY_ACTIONS_NAME).AsString();
+	private string layersName => settings.GetSetting(KEY_LAYERS_NAME).AsString();
+	private string groupsName => settings.GetSetting(KEY_GROUPS_NAME).AsString();
+	private bool generateActions => settings.GetSetting(KEY_GENERATE_ACTIONS).AsBool();
+	private bool generateLayers => settings.GetSetting(KEY_GENERATE_LAYERS).AsBool();
+	private bool generateGroups => settings.GetSetting(KEY_GENERATE_GROUPS).AsBool();
+	private string pathToScripts => settings.GetSetting(KEY_PATH_TO_SCRIPTS).AsString();
 
 	public override void _EnterTree() {
+		settings = EditorInterface.Singleton.GetEditorSettings();
+		InitEditorSettings();
 		ProjectSettings.SettingsChanged += OnProjectSettingsChanged;
-		EditorInterface.Singleton.GetEditorSettings().SettingsChanged += OnEditorSettingsChanged;
 	}
 
 	private void OnProjectSettingsChanged() {
@@ -35,14 +49,19 @@ public partial class ConstantsGenerator : EditorPlugin {
 			outputDirectory
 		);
 
-		if (project == null) {
-			project = FindNamespace(projectRoot);
-			if (project == null) {
+		string projectNamespace = settingsNamespace;
+
+		if (settingsNamespace == "") {
+			projectNamespace = FindNamespace(projectRoot);
+			if (projectNamespace == null) {
 				return;
 			}
 		}
 
-		string effectiveNamespace = namespaceOverwrite ?? $"{project}.{outputRelativePath.Replace('/', '.').Replace('\\', '.')}";
+		string effectiveNamespace = namespaceOverwrite;
+		if (namespaceOverwrite == "") {
+			effectiveNamespace = $"{projectNamespace}.{outputRelativePath.Replace('/', '.').Replace('\\', '.')}";
+		}
 
 		string godotProjectPath = Path.Combine(projectRoot, "project.godot");
 
@@ -114,7 +133,7 @@ public partial class ConstantsGenerator : EditorPlugin {
 		Directory.CreateDirectory(outputDirectory);
 
 		// Generate Actions.cs
-		if (!noActions) {
+		if (generateActions) {
 			var actionBuilder = new StringBuilder();
 			actionBuilder.AppendLine("using Godot;\n");
 			actionBuilder.AppendLine($"namespace {effectiveNamespace};\n");
@@ -132,7 +151,7 @@ public partial class ConstantsGenerator : EditorPlugin {
 		}
 
 		// Generate CollisionLayers.cs
-		if (!noLayers) {
+		if (generateLayers) {
 			var layersBuilder = new StringBuilder();
 			layersBuilder.AppendLine($"namespace {effectiveNamespace};\n");
 			layersBuilder.AppendLine($"public static class {layersName} {{");
@@ -150,7 +169,7 @@ public partial class ConstantsGenerator : EditorPlugin {
 		}
 
 		// Generate Groups.cs
-		if (!noGroups) {
+		if (generateGroups) {
 			var groupsBuilder = new StringBuilder();
 			groupsBuilder.AppendLine("using Godot;\n");
 			groupsBuilder.AppendLine($"namespace {effectiveNamespace};\n");
@@ -203,21 +222,34 @@ public partial class ConstantsGenerator : EditorPlugin {
 
 	private bool UpdateFileIfNew(string filePath, StringBuilder fileBuilder) {
 		if (File.Exists(filePath)) {
-			if (!File.ReadAllText(filePath).Equals(fileBuilder.ToString())) {
-				File.WriteAllText(filePath, fileBuilder.ToString());
-				return true;
+			if (File.ReadAllText(filePath).Equals(fileBuilder.ToString())) {
+				return false;
 			}
 		}
-		return false;
+		File.WriteAllText(filePath, fileBuilder.ToString());
+		return true;
 	}
 
-	private void OnEditorSettingsChanged() {
+	private void InitEditorSettings() {
+		AddSetting(KEY_PROJECT_NAME, "");
+		AddSetting(KEY_NAMESPACE_OVERWRITE, "");
+		AddSetting(KEY_ACTIONS_NAME, "Actions");
+		AddSetting(KEY_LAYERS_NAME, "CollisionLayers");
+		AddSetting(KEY_GROUPS_NAME, "Groups");
+		AddSetting(KEY_GENERATE_ACTIONS, true);
+		AddSetting(KEY_GENERATE_LAYERS, true);
+		AddSetting(KEY_GENERATE_GROUPS, true);
+		AddSetting(KEY_PATH_TO_SCRIPTS, "scripts/generated");
+	}
 
+	private void AddSetting(string name, Variant defaultValue) {
+		if (!settings.HasSetting(name)) {
+			settings.SetSetting(name, defaultValue);
+		}
 	}
 
 	public override void _ExitTree() {
 		ProjectSettings.SettingsChanged -= OnProjectSettingsChanged;
-		EditorInterface.Singleton.GetEditorSettings().SettingsChanged += OnEditorSettingsChanged;
 	}
 }
 #endif
