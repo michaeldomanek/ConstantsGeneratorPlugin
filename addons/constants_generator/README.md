@@ -6,9 +6,10 @@ generates strongly-typed C# constants.
 ## Features
 
 - Parses `project.godot` to extract:
-    - Input actions
-    - Collision layers
-    - Group names
+  - Input actions
+  - Collision layers
+  - Group names
+- Generates AudioBus constants with name and id
 - Automatically generates files on project settings change
 - Generates static `StringName` constants or `uint` for collision layers
 - Automatically infers root namespace from `.csproj`
@@ -47,9 +48,11 @@ You can configure the plugin under:
 | `actions_name`        | Class name for generated input actions                                     |
 | `layers_name`         | Class name for generated collision layers                                  |
 | `groups_name`         | Class name for generated node groups                                       |
+| `audio_bus_name`      | Class name for generated audio bus constants                               |
 | `generate_actions`    | Whether to generate the actions file                                       |
 | `generate_layers`     | Whether to generate the layers file                                        |
 | `generate_groups`     | Whether to generate the groups file                                        |
+| `generate_audio_bus`  | Whether to generate the audio bus file                                     |
 
 > Files are only written when content has changed to avoid unnecessary reimports and build noise.
 
@@ -78,6 +81,7 @@ public override void _Input(InputEvent @event) {
     }
 }
 ```
+> A more detailed example can be found in [ExampleUsage.cs](ExampleUsage.cs)
 
 ## License
 
