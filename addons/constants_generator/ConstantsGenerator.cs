@@ -47,9 +47,16 @@ public partial class ConstantsGenerator : EditorPlugin {
 		InitEditorSettings();
 		ProjectSettings.SettingsChanged += OnProjectSettingsChanged;
 		AudioServer.BusRenamed += OnBusLayoutChanged;
+
+		OnProjectSettingsChanged();
+		CreateAudioBusConstants();
 	}
 
-	private void OnBusLayoutChanged(long busIndex, StringName oldName, StringName newName) {
+	private void OnBusLayoutChanged(long _, StringName __, StringName ___) {
+		CreateAudioBusConstants();
+	}
+
+	private void CreateAudioBusConstants() {
 		(string _, string outputDirectory, string effectiveNamespace) = GetProjectNamespaceAndOutputDirectory();
 
 		var audioBuses = new Dictionary<int, string>();
@@ -307,6 +314,7 @@ public partial class ConstantsGenerator : EditorPlugin {
 
 	public override void _ExitTree() {
 		ProjectSettings.SettingsChanged -= OnProjectSettingsChanged;
+		AudioServer.BusRenamed -= OnBusLayoutChanged;
 	}
 }
 #endif
